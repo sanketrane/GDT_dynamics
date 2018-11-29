@@ -11,10 +11,10 @@ require(tidyverse)
 modelName <- "SH_model"
 data_derived1 <- "source_gdt.csv"    # name of the file for precursor pop
 data_derived2 <- paste("counts_gdt.csv", sep="")
-data_derived3 <- paste("NFd_gdt.csv", sep="")
+data_derived3 <- paste("Nfd_gdt.csv", sep="")
 
 ## setting working dirctory
-setwd("/opt/mesh/eigg/sanket/ki67_FM")
+setwd("/opt/mesh/eigg/sanket/GDT_dynamics")
 
 ## Setting all the directories for opeartions
 projectDir <- getwd()
@@ -23,7 +23,7 @@ modelDir <- file.path(projectDir, "models")
 dataDir <- file.path(projectDir, "data")
 toolsDir <- file.path(scriptDir, "tools")
 outDir <- file.path(modelDir, paste(modelName, "_", substr(data_derived1, 1,2), sep=""))
-outputDir <- file.path(projectDir, "output/T1_Norm")
+outputDir <- file.path(projectDir, "output")
 saveDir <- file.path(outputDir, paste(modelName, "_", substr(data_derived1, 1,2), sep=""))
 figDir <- file.path(projectDir, "deliv", "figures", paste(modelName, "_", substr(data_derived1, 1,2), sep=""))
 tabDir <- file.path(projectDir, "deliv", "tables", paste(modelName, "_", substr(data_derived1, 1,2), sep=""))
@@ -32,16 +32,16 @@ tabDir <- file.path(projectDir, "deliv", "tables", paste(modelName, "_", substr(
 source(file.path(toolsDir, "stanTools.R"))                # save results in new folder
 
 # compiling multiple stan objects together that ran on different nodes
-stanfit1 <- readRDS(file.path(saveDir, "3448_P0_ki67_INC_FM.rds"))
-stanfit2 <- readRDS(file.path(saveDir, "3448_P1_ki67_INC_FM.rds"))
-stanfit3 <- readRDS(file.path(saveDir, "3448_P2_ki67_INC_FM.rds"))
-stanfit4 <- readRDS(file.path(saveDir, "3448_P3_ki67_INC_FM.rds"))
+stanfit1 <- readRDS(file.path(saveDir, "3717_P0_SH_model.rds"))
+stanfit2 <- readRDS(file.path(saveDir, "3717_P1_SH_model.rds"))
+stanfit3 <- readRDS(file.path(saveDir, "3717_P2_SH_model.rds"))
+stanfit4 <- readRDS(file.path(saveDir, "3717_P3_SH_model.rds"))
 
-fit <- sflist2stanfit(list(stanfit1, stanfit2, stanfit4, stanfit3))
+fit <- sflist2stanfit(list(stanfit1, stanfit2, stanfit3, stanfit4))
 
 # finding the parameters used in the model 
 # using the last parameter("sigma4") in the array to get the total number of parameters set in the model
-num_pars <- which(fit@model_pars %in% "sigma4")      # the variable "sigma4" will change depdending on the data used
+num_pars <- which(fit@model_pars %in% "sigma2")      # the variable "sigma4" will change depdending on the data used
 parametersToPlot <- fit@model_pars[1:num_pars]
 
 # number of post-burnin samples that are used for plotting 
@@ -54,7 +54,6 @@ nPost <- nrow(fit)
 source_sorted <- read_csv(file.path(dataDir, data_derived1))%>% arrange(time.post.BMT)
 counts_sorted <- read_csv(file.path(dataDir, data_derived2))%>% arrange(age.at.S1K)
 Nfd_sorted <- read_csv(file.path(dataDir, data_derived3))%>% arrange(time.post.BMT)
-ki67_sorted <- read_csv(file.path(dataDir, data_derived4))%>% arrange(time.post.BMT)
 
 # ################################################################################################
 # calculating PSIS-L00-CV for the fit
@@ -202,10 +201,10 @@ fdpred <- fdpred%>%
 
 ggplot() +
   geom_hline(aes(yintercept = 1), color = "#d11100", linetype = 2, size=1.2)+
-  geom_ribbon(data = fdpred, aes(x = timeseries, ymin = lb, ymax=ub), fill = "#0099cc", alpha = 0.2) +
-  geom_ribbon(data = Y2pred, aes(x = timeseries, ymin = lb, ymax = ub), fill = "#f23047", alpha = 0.35)+
-  geom_line(data = Y2pred, aes(x = timeseries, y = median), size=1.5) +
-  geom_point(data = Nfd_sorted, aes(x = time.post.BMT, y = Nfd), size=3) +
+  geom_ribbon(data = fdpred, aes(x = timeseries, ymin = lb, ymax=ub), fill = "#808080", alpha = 0.2) +
+  geom_ribbon(data = Y2pred, aes(x = timeseries, ymin = lb, ymax = ub), fill = "#0099cc", alpha = 0.35)+
+  geom_line(data = Y2pred, aes(x = timeseries, y = median), color = "#1e2366", size=1.5) +
+  geom_point(data = Nfd_sorted, aes(x = time.post.BMT, y = Nfd), color = "#1e2366", size=3) +
   labs(x = "Days post BMT", y = NULL, title = "Normalised Donor fractions: gdt") +
   scale_x_continuous(limits = c(0, 350), breaks = c(0,150,300,450))+
   scale_y_continuous(limits =c(0, 1.2), breaks = c(0, 0.3, 0.6, 0.9, 1.2, 1.5))+ 

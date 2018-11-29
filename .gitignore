@@ -12,3 +12,5 @@ deliv/
 *.Rsave
 
 scripts/\.Rproj\.user/
+
+*.txt

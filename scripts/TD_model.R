@@ -2,7 +2,7 @@
 ## clearing the environment
 rm(list = ls())  
 gc()    
-setwd("~/Desktop/Git_repos/GDT_dynamics")
+setwd("/opt/mesh/eigg/sanket/GDT_dynamics")
 
 ####################################################################################
 ## Installing r-stan pachage on the go:
@@ -29,7 +29,7 @@ require(tidyverse)
 modelName <- "TD_model"
 data_derived1 <- "source_gdt.csv"    # name of the file for precursor pop
 data_derived2 <- "counts_gdt.csv"
-data_derived3 <- "NFd_gdt.csv"
+data_derived3 <- "Nfd_gdt.csv"
 
 ## Setting all the directories for opeartions
 projectDir <- getwd()
@@ -37,7 +37,7 @@ scriptDir <- file.path(projectDir, "scripts")
 modelDir <- file.path(projectDir, "models")
 dataDir <- file.path(projectDir, "data")
 toolsDir <- file.path(scriptDir, "tools")
-outputDir <- file.path(projectDir, "output/T1_Norm")
+outputDir <- file.path(projectDir, "output")
 saveDir <- file.path(outputDir, paste(modelName, "_", substr(data_derived1, 1,2), sep=""))
 
 # loadiong the scr# loadiong the script that contains functions for plotting stan parameters
