@@ -23,23 +23,21 @@ functions{
        return chi;
     }
 
-  real[] khm(real t, real[] y, real[] parms, real[] rdata, int[] idata) {
-     real dydt[4];             // system of ODEs
+  real[] inc(real t, real[] y, real[] parms, real[] rdata, int[] idata) {
+     real dydt[3];             // system of ODEs
 
-     real psi      = parms[1];                          // daily input from source as a frcation of total pool.
-     real f_fast   = parms[2];                          // fraction of fast cells within the source influx.
-     real lambda_f = parms[3];                          // net rate of loss of fast subset.
-     real lambda_s = parms[4];                          // net rate of loss of slow subset.
+     real psi        = parms[1];                          // daily input from source as a frcation of total pool.
+     real lambda     = parms[2];                          // net rate of loss of fast subset.
+     real lambda_inc = parms[3];                          // net rate of loss of slow subset.
 
      real theta0 = rdata[1];
      real nu     = rdata[2];
      real chiEst = rdata[3];
      real qEst   = rdata[4];
 
-     dydt[1] = (psi * theta_spline(t, nu, theta0) * Chi_spline(t, chiEst, qEst) * f_fast) - lambda_f * y[1];
-     dydt[2] = (psi * theta_spline(t, nu, theta0) * Chi_spline(t, chiEst, qEst) * (1-f_fast)) - lambda_s * y[2];
-     dydt[3] = (psi * theta_spline(t, nu, theta0) * (1 - Chi_spline(t, chiEst, qEst)) * f_fast) -  lambda_f  * y[3];
-     dydt[4] = (psi * theta_spline(t, nu, theta0) * (1 - Chi_spline(t, chiEst, qEst)) * (1-f_fast)) - lambda_s * y[4];
+     dydt[1] = (psi * theta_spline(t, nu, theta0) * Chi_spline(t, chiEst, qEst)) - lambda * y[1];
+     dydt[2] = (psi * theta_spline(t, nu, theta0) * (1 - Chi_spline(t, chiEst, qEst))) - lambda * y[2];
+     dydt[3] = - lambda_inc  * y[3];
      return dydt;
  }
 
@@ -104,54 +102,50 @@ transformed data{
 
 parameters{
   real<lower = 0, upper=1> psi;
-  real<lower = 0, upper=1> f_fast;
-  real<lower = 0> lambda_f;
-  real<lower = 0> lambda_s;
+  real<lower = 0> lambda;
+  real<lower = 0> lambda_inc;
 
   real y0_Log;                           // log transformed y0
-  real<lower = 0, upper=1> alpha;        // alpha is fraction of fast cells within the Target population.
+  real<lower = 0, upper=1> alpha;        // alpha is fraction of incumbent cells within the Target population.
 
   real<lower = 0> sigma1;                  // variance for data set 1
   real<lower = 0> sigma2;                  // variance for data set 2
   }
 
 transformed parameters{
-  real y_hat[num_index, 4];          // array assigned to ODE solutions (dims in the bracket).
+  real y_hat[num_index, 3];          // array assigned to ODE solutions (dims in the bracket).
   real y1_mean[numObs];
   real y2_mean[numObs];
-  real parms[4];
-  real init_cond[4];
+  real parms[3];
+  real init_cond[3];
   real y0;
 
   y0 = exp(y0_Log);
 
   init_cond[1] = Nd_0;               // Nd_0 is the count of host population at BMT i.e time zero => Nd_0 = 0.
-  init_cond[2] = Nd_0 ;
-  init_cond[3] = y0 * alpha;
-  init_cond[4] = y0 * (1 - alpha);   // y0 is the count of host population at BMT i.e time zero.
+  init_cond[2] = y0 * alpha;
+  init_cond[3] = y0 * (1 - alpha);   // y0 is the count of host population at BMT i.e time zero.
   parms[1] = psi;
-  parms[2] = f_fast;
-  parms[3] = lambda_f;
-  parms[4] = lambda_s;
+  parms[2] = lambda;
+  parms[3] = lambda_inc;
 
   // Ode Solver
   y_hat[1, ] = init_cond;
-  y_hat[2:num_index, ] = integrate_ode_rk45(khm, init_cond, solve_time[1], solve_time[2:num_index], parms, rdata, idata);
+  y_hat[2:num_index, ] = integrate_ode_rk45(inc, init_cond, solve_time[1], solve_time[2:num_index], parms, rdata, idata);
 
   for (i in 1:numObs){
     // total counts
-    y1_mean[i] = y_hat[time_index[i], 1] + y_hat[time_index[i], 2] + y_hat[time_index[i], 3] + y_hat[time_index[i], 4];
+    y1_mean[i] = y_hat[time_index[i], 1] + y_hat[time_index[i], 2] + y_hat[time_index[i], 3];
 
     // donor fractions normalised with chimerism in the source
-    y2_mean[i] = (y_hat[time_index[i], 1] + y_hat[time_index[i], 2])/(y1_mean[i] * Chi_spline(dpBMT[i], chiEst, qEst));
+    y2_mean[i] = (y_hat[time_index[i], 1])/(y1_mean[i] * Chi_spline(dpBMT[i], chiEst, qEst));
   }
 }
 
 model{
   psi ~ normal(0.5, 0.25);
-  f_fast ~ normal(0.5, 0.25);
-  lambda_f ~ normal(0.01, 1);
-  lambda_s ~ normal(0.01, 1);
+  lambda ~ normal(0.01, 1);
+  lambda_inc ~ normal(0.01, 1);
 
   y0_Log ~ normal(11, 2);
   alpha ~ normal(0.5, 0.25);
@@ -164,7 +158,7 @@ model{
 }
 
 generated quantities{
-  real y_hat_pred[numPred, 4];
+  real y_hat_pred[numPred, 3];
   real y1_mean_pred[numPred];
   real y2_mean_pred[numPred];
   real countspred[numPred];
@@ -174,7 +168,7 @@ generated quantities{
   vector[numObs] log_lik2;
 
   y_hat_pred[1, ] = init_cond;
-  y_hat_pred[2:numPred, ] = integrate_ode_rk45(khm, init_cond, ts_pred[1], ts_pred[2:numPred], parms, rdata, idata);
+  y_hat_pred[2:numPred, ] = integrate_ode_rk45(inc, init_cond, ts_pred[1], ts_pred[2:numPred], parms, rdata, idata);
 
   // Initial conditions for total counts, fd and fractions of ki67host and ki67 donor
   y1_mean_pred[1] = y0;
@@ -184,10 +178,10 @@ generated quantities{
   fdpred[1] = Nd_0;
 
   for (i in 2:numPred){
-    y1_mean_pred[i] = y_hat_pred[i, 1] + y_hat_pred[i, 2] + y_hat_pred[i, 3] + y_hat_pred[i, 4];
+    y1_mean_pred[i] = y_hat_pred[i, 1] + y_hat_pred[i, 2] + y_hat_pred[i, 3];
     countspred[i] = exp(normal_rng(log(y1_mean_pred[i]), sigma1));
 
-    y2_mean_pred[i] = (y_hat_pred[i, 1] + y_hat_pred[i, 2]) / (y1_mean_pred[i] * Chi_spline(ts_pred[i], chiEst, qEst));
+    y2_mean_pred[i] = (y_hat_pred[i, 1]) / (y1_mean_pred[i] * Chi_spline(ts_pred[i], chiEst, qEst));
     fdpred[i] = asinsqrt_inv(normal_rng(asinsqrt_real(y2_mean_pred[i]), sigma2));
   }
 

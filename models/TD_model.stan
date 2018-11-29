@@ -48,6 +48,32 @@ functions{
      dydt[2] = (psi * theta_spline(t, nu, theta0) * (1 - Chi_spline(t, chiEst, qEst))) - lambda(t, rC, lambda0)* y[2];
      return dydt;
  }
+
+ // functions for transformation of fractions in (0,a), where a >=1
+ real[] asinsqrt_array(real[] x){
+   int ndims = size(x);
+   real answer[ndims];
+   real a = 1.2;
+
+   for (i in 1: ndims){
+     answer[i] = asin(sqrt(x[i])/sqrt(a));
+   }
+   return answer;
+ }
+
+ real asinsqrt_real(real x){
+   real a = 1.2;
+
+   real answer = asin(sqrt(x)/sqrt(a));
+   return answer;
+ }
+
+ real asinsqrt_inv(real x){
+   real a = 1.2;
+
+   real answer = a * (sin(x))^2;
+   return answer;
+ }
 }
 
 data{
@@ -79,7 +105,7 @@ transformed data{
   rdata[4] = qEst;
 
   y1 = log(counts);                 // transforming cell counts of donor compartments to feed in to ODEs
-  y2 = (Nfd);                       // untransfored cell counts of donor fractions normalised to source chimerism to feed in to ODEs
+  y2 = asinsqrt_array(Nfd);                       // untransfored cell counts of donor fractions normalised to source chimerism to feed in to ODEs
 }
 
 parameters{
@@ -133,7 +159,7 @@ model{
   sigma2 ~ cauchy(0.1, 1);
 
   y1 ~ normal(log(y1_mean), sigma1);
-  y2 ~ normal((y2_mean), sigma2);
+  y2 ~ normal(asinsqrt_array(y2_mean), sigma2);
 }
 
 generated quantities{
@@ -162,13 +188,13 @@ generated quantities{
     countspred[i] = exp(normal_rng(log(y1_mean_pred[i]), sigma1));
 
     y2_mean_pred[i] = y_hat_pred[i, 1] / (y1_mean_pred[i] * Chi_spline(ts_pred[i], chiEst, qEst));
-    fdpred[i] = (normal_rng((y2_mean_pred[i]), sigma2));
+    fdpred[i] = asinsqrt_inv(normal_rng(asinsqrt_real(y2_mean_pred[i]), sigma2));
   }
 
   // calculating the log predictive accuracy for each point
   for (n in 1:numObs) {
     log_lik1[n] = normal_lpdf(y1[n] | log(y1_mean[n]), sigma1);
-    log_lik2[n] = normal_lpdf(y2[n] | (y2_mean[n]), sigma2);
+    log_lik2[n] = normal_lpdf(y2[n] | asinsqrt_real(y2_mean[n]), sigma2);
     log_lik[n] = log_lik1[n] + log_lik2[n];
   }
 }
