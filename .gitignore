@@ -1,0 +1,14 @@
+
+data/
+
+deliv/
+
+\.DS_Store
+
+\.Rhistory
+
+*.rds
+
+*.Rsave
+
+scripts/\.Rproj\.user/
