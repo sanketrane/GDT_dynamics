@@ -56,7 +56,7 @@ counts_sorted <- read_csv(file.path(dataDir, data_derived2))%>% arrange(time.pos
 Nfd_sorted <- read_csv(file.path(dataDir, data_derived3))%>% arrange(time.post.BMT)
 
 # time points in data
-data_time <- counts_sorted$time.post.BMT    
+data_time <- counts_sorted$time.post.BMT
 solve_time <- c(0, unique(data_time))   # unique time points to solve ode
 
 #keep track of index of time point in relation to solve_time
@@ -90,14 +90,15 @@ data <- list(
 init <- function() list(
   psi = exp(rnorm(1, log(0.5), 0.2)),
   lambda = exp(rnorm(1,log(0.02), 1)),
+  mu = (rnorm(1, 0, 0.1)),
   
-  y0_Log = rnorm(1, 17 , 0.1),
+  y0_Log = rnorm(1, 13 , 0.1),
   
   sigma1 = exp(rnorm(1,log(1.5), 1)),
   sigma2 = exp(rnorm(1,log(1.5), 1)))
 
 ## Specify the variables for which you want history and density plots
-parametersToPlot <- c("psi", "lambda", "y0_Log", "sigma1", "sigma2")
+parametersToPlot <- c("psi", "lambda", "mu", "y0_Log", "sigma1", "sigma2")
 
 ## Additional variables to monitor
 otherRVs <- c("y1_mean_pred", "countspred", "y2_mean_pred", "fdpred", "log_lik")
@@ -123,8 +124,8 @@ fit <- stan(file = file.path(modelDir, paste(modelName, ".stan", sep = "")),
             warmup = nBurnin,
             thin = nThin, 
             init = init,
-            control = list(adapt_delta = 0.9),
-            chains = nChains)
+            chains = nChains,
+            control = list(adapt_delta = 0.9))
 
 ################################################################################################
 # save results in output directory

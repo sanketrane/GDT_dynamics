@@ -23,20 +23,29 @@ functions{
        return chi;
     }
 
+    real psi_var(real t,                // function that gives source influx over time
+      real mu,                         // source influx at t0
+      real psi){                         // rate of change of the source influx
+
+        real answer = psi * exp(mu * t);
+        return answer;
+    }
+
   real[] inc(real t, real[] y, real[] parms, real[] rdata, int[] idata) {
      real dydt[3];             // system of ODEs
 
      real psi        = parms[1];                          // daily input from source as a frcation of total pool.
      real lambda     = parms[2];                          // net rate of loss of fast subset.
      real lambda_inc = parms[3];                          // net rate of loss of slow subset.
+     real mu         = parms[4];
 
      real theta0 = rdata[1];
      real nu     = rdata[2];
      real chiEst = rdata[3];
      real qEst   = rdata[4];
 
-     dydt[1] = (psi * theta_spline(t, nu, theta0) * Chi_spline(t, chiEst, qEst)) - lambda * y[1];
-     dydt[2] = (psi * theta_spline(t, nu, theta0) * (1 - Chi_spline(t, chiEst, qEst))) - lambda * y[2];
+     dydt[1] = (psi_var(t, mu, psi) * theta_spline(t, nu, theta0) * Chi_spline(t, chiEst, qEst)) - lambda * y[1];
+     dydt[2] = (psi_var(t, mu, psi) * theta_spline(t, nu, theta0) * (1 - Chi_spline(t, chiEst, qEst))) - lambda * y[2];
      dydt[3] = - lambda_inc  * y[3];
      return dydt;
  }
@@ -104,6 +113,7 @@ parameters{
   real<lower = 0, upper=1> psi;
   real<lower = 0> lambda;
   real<lower = 0> lambda_inc;
+  real mu;
 
   real y0_Log;                           // log transformed y0
   real<lower = 0, upper=1> alpha;        // alpha is fraction of incumbent cells within the Target population.
@@ -116,7 +126,7 @@ transformed parameters{
   real y_hat[num_index, 3];          // array assigned to ODE solutions (dims in the bracket).
   real y1_mean[numObs];
   real y2_mean[numObs];
-  real parms[3];
+  real parms[4];
   real init_cond[3];
   real y0;
 
@@ -128,6 +138,7 @@ transformed parameters{
   parms[1] = psi;
   parms[2] = lambda;
   parms[3] = lambda_inc;
+  parms[4] = mu;
 
   // Ode Solver
   y_hat[1, ] = init_cond;
@@ -146,6 +157,7 @@ model{
   psi ~ normal(0.5, 0.25);
   lambda ~ normal(0.01, 1);
   lambda_inc ~ normal(0.01, 1);
+  mu ~ normal(0, 1);
 
   y0_Log ~ normal(11, 2);
   alpha ~ normal(0.5, 0.25);

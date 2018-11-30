@@ -93,14 +93,14 @@ init <- function() list(
   lambda_f = exp(rnorm(1,log(0.02), 1)),
   lambda_s = exp(rnorm(1,log(0.02), 1)),
   
-  y0_Log = rnorm(1, 17 , 0.1),
+  y0_Log = rnorm(1, 13 , 0.1),
   alpha = exp(rnorm(1, log(0.5), 0.2)),
   
   sigma1 = exp(rnorm(1,log(1.5), 1)),
   sigma2 = exp(rnorm(1,log(1.5), 1)))
 
 ## Specify the variables for which you want history and density plots
-parametersToPlot <- c("psi", "f_fast", "lambda_f", "lambda_s", "y0_Log", "alpha", "sigma1", "sigma2")
+parametersToPlot <- c("psi", "mu", "f_fast", "lambda_f", "lambda_s", "y0_Log", "alpha", "sigma1", "sigma2")
 
 ## Additional variables to monitor
 otherRVs <- c("y1_mean_pred", "countspred", "y2_mean_pred", "fdpred", "log_lik")

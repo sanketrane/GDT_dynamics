@@ -23,29 +23,38 @@ functions{
        return chi;
     }
 
+    real psi_var(real t,                // function that gives source influx over time
+      real mu,                         // source influx at t0
+      real psi){                         // rate of change of the source influx
+
+        real answer = psi * exp(mu * t);
+        return answer;
+    }
+
   real lambda(real t,
     real rC,               // rC is the rate of change of net loss rate lambda with time
     real lambda0) {        // lambda0 gives the initial counts of the source compartment
 
       real lambda;
-      lambda = lambda0 * exp(-rC * t);
+      lambda = lambda0 * exp(rC * t);
       return lambda;
    }
 
   real[] tdm(real t, real[] y, real[] parms, real[] rdata, int[] idata) {
      real dydt[2];             // system of ODEs
 
-     real psi    = parms[1];
+     real psi     = parms[1];
      real lambda0 = parms[2];
-     real rC     = parms[3];
+     real rC      = parms[3];
+     real mu      = parms[4];
 
      real theta0 = rdata[1];
      real nu     = rdata[2];
      real chiEst = rdata[3];
      real qEst   = rdata[4];
 
-     dydt[1] = (psi * theta_spline(t, nu, theta0) * Chi_spline(t, chiEst, qEst)) - lambda(t, rC, lambda0) * y[1];
-     dydt[2] = (psi * theta_spline(t, nu, theta0) * (1 - Chi_spline(t, chiEst, qEst))) - lambda(t, rC, lambda0)* y[2];
+     dydt[1] = (psi_var(t, mu, psi) * theta_spline(t, nu, theta0) * Chi_spline(t, chiEst, qEst)) - lambda(t, rC, lambda0) * y[1];
+     dydt[2] = (psi_var(t, mu, psi) * theta_spline(t, nu, theta0) * (1 - Chi_spline(t, chiEst, qEst))) - lambda(t, rC, lambda0)* y[2];
      return dydt;
  }
 
@@ -112,7 +121,8 @@ parameters{
   real y0_Log;
   real<lower = 0, upper=1> psi;
   real<lower = 0> lambda0;
-  real rC_Log;
+  real rC;
+  real mu;
 
 
   real<lower = 0> sigma1;
@@ -123,19 +133,20 @@ transformed parameters{
   real y_hat[num_index, 2];
   real y1_mean[numObs];
   real y2_mean[numObs];
-  real parms[3];
+  real parms[4];
   real init_cond[2];
   real y0;
-  real rC;
+  //real rC;
 
   y0 = exp(y0_Log);
-  rC = exp(rC_Log);
+  //rC = exp(rC_Log);
 
   init_cond[1] = Nd_0;
   init_cond[2] = y0 ;
   parms[1] = psi;
   parms[2] = lambda0;
   parms[3] = rC;
+  parms[4] = mu;
 
   y_hat[1, ] = init_cond;
   y_hat[2:num_index, ] = integrate_ode_rk45(tdm, init_cond, solve_time[1], solve_time[2:num_index], parms, rdata, idata);
@@ -153,7 +164,8 @@ model{
   psi ~ normal(0.5, 0.25);
   y0_Log ~ normal(11, 2);
   lambda0 ~ normal(0.01, 0.5);
-  rC_Log ~ normal(-3, 4);
+  rC ~ normal(0, 0.01);
+  mu ~ normal(0, 1);
 
   sigma1 ~ cauchy(0.1, 1);
   sigma2 ~ cauchy(0.1, 1);

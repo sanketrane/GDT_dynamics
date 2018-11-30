@@ -23,6 +23,14 @@ functions{
        return chi;
     }
 
+    real psi_var(real t,                // function that gives source influx over time
+      real mu,                         // source influx at t0
+      real psi){                         // rate of change of the source influx
+
+        real answer = psi * exp(mu * t);
+        return answer;
+    }
+
   real[] khm(real t, real[] y, real[] parms, real[] rdata, int[] idata) {
      real dydt[4];             // system of ODEs
 
@@ -30,16 +38,17 @@ functions{
      real f_fast   = parms[2];                          // fraction of fast cells within the source influx.
      real lambda_f = parms[3];                          // net rate of loss of fast subset.
      real lambda_s = parms[4];                          // net rate of loss of slow subset.
+     real mu       = parms[5];
 
      real theta0 = rdata[1];
      real nu     = rdata[2];
      real chiEst = rdata[3];
      real qEst   = rdata[4];
 
-     dydt[1] = (psi * theta_spline(t, nu, theta0) * Chi_spline(t, chiEst, qEst) * f_fast) - lambda_f * y[1];
-     dydt[2] = (psi * theta_spline(t, nu, theta0) * Chi_spline(t, chiEst, qEst) * (1-f_fast)) - lambda_s * y[2];
-     dydt[3] = (psi * theta_spline(t, nu, theta0) * (1 - Chi_spline(t, chiEst, qEst)) * f_fast) -  lambda_f  * y[3];
-     dydt[4] = (psi * theta_spline(t, nu, theta0) * (1 - Chi_spline(t, chiEst, qEst)) * (1-f_fast)) - lambda_s * y[4];
+     dydt[1] = (psi_var(t, mu, psi) * theta_spline(t, nu, theta0) * Chi_spline(t, chiEst, qEst) * f_fast) - lambda_f * y[1];
+     dydt[2] = (psi_var(t, mu, psi) * theta_spline(t, nu, theta0) * Chi_spline(t, chiEst, qEst) * (1-f_fast)) - lambda_s * y[2];
+     dydt[3] = (psi_var(t, mu, psi) * theta_spline(t, nu, theta0) * (1 - Chi_spline(t, chiEst, qEst)) * f_fast) -  lambda_f  * y[3];
+     dydt[4] = (psi_var(t, mu, psi) * theta_spline(t, nu, theta0) * (1 - Chi_spline(t, chiEst, qEst)) * (1-f_fast)) - lambda_s * y[4];
      return dydt;
  }
 
@@ -107,6 +116,7 @@ parameters{
   real<lower = 0, upper=1> f_fast;
   real<lower = 0> lambda_f;
   real<lower = 0> lambda_s;
+  real mu;
 
   real y0_Log;                           // log transformed y0
   real<lower = 0, upper=1> alpha;        // alpha is fraction of fast cells within the Target population.
@@ -119,7 +129,7 @@ transformed parameters{
   real y_hat[num_index, 4];          // array assigned to ODE solutions (dims in the bracket).
   real y1_mean[numObs];
   real y2_mean[numObs];
-  real parms[4];
+  real parms[5];
   real init_cond[4];
   real y0;
 
@@ -133,6 +143,7 @@ transformed parameters{
   parms[2] = f_fast;
   parms[3] = lambda_f;
   parms[4] = lambda_s;
+  parms[5] = mu;
 
   // Ode Solver
   y_hat[1, ] = init_cond;
@@ -152,6 +163,7 @@ model{
   f_fast ~ normal(0.5, 0.25);
   lambda_f ~ normal(0.01, 1);
   lambda_s ~ normal(0.01, 1);
+  mu ~ normal(0, 1);
 
   y0_Log ~ normal(11, 2);
   alpha ~ normal(0.5, 0.25);
