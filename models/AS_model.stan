@@ -155,9 +155,9 @@ transformed data{
 
 parameters{
   real<lower = 0> lambda0;
-  real<lower = 0> r_l;
+  real r_l;
   real<lower = 0> y0_Log;
-  real<lower = 0> p_age;
+  real p_age;
 
   real<lower = 0> sigma1;
   real<lower = 0> sigma2;
