@@ -155,9 +155,9 @@ transformed data{
 
 parameters{
   real<lower = 0> lambda0;
-  real r_l;
-  real y0_Log;
-  real p_age;
+  real<lower = 0> r_l;
+  real<lower = 0> y0_Log;
+  real<lower = 0> p_age;
 
   real<lower = 0> sigma1;
   real<lower = 0> sigma2;
@@ -197,9 +197,9 @@ transformed parameters{
 
 model{
   lambda0 ~ normal(0.01, 1);
-  r_l ~ normal(0, 1);
+  r_l ~ normal(0.001, 1);
   y0_Log ~ normal(11, 2);
-  p_age ~ normal(0, 1);
+  p_age ~ normal(0.001, 1);
 
   sigma1 ~ cauchy(0.1, 1);
   sigma2 ~ cauchy(0.1, 1);
@@ -228,7 +228,7 @@ generated quantities{
   fdpred[1] = Nd_0;
 
   for (i in 2:numPred){
-    y1_mean_pred[i] = y_hat_pred[i, 1] + y_hat_pred[i, 2];
+    y1_mean_pred[i] = y_hat_pred[i, 1] + y_hat_pred[i, 2] + y_hat_pred[i, 3];
     countspred[i] = exp(normal_rng(log(y1_mean_pred[i]), sigma1));
 
     y2_mean_pred[i] = y_hat_pred[i, 1] / (y1_mean_pred[i] * Chi_spline(tau_pred[i], chiEst, qEst));
